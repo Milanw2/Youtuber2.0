@@ -72,8 +72,26 @@ namespace Youtuber2._0
             label_amount.Content = listbox_logging.Items.Count.ToString();
         }
 
-        public void btnUpdateSelectedPlaylist_Click(object sender, RoutedEventArgs e)
+        private async void btnUpdateSelectedPlaylist_Click(object sender, RoutedEventArgs e)
         {
+            try
+            {
+                Stopwatch stopWatch = new Stopwatch();
+                stopWatch.Start();
+                disableButtons();
+                await Task.Run(() => this.UpdateSelectedPlaylist(sender, e));
+                enableButtons();
+                stopWatch.Stop();
+                _log.Info("All files where downloaded in : " + stopWatch.Elapsed + " seconds.");
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex.ToString());
+            }
+        }
+
+        private void UpdateSelectedPlaylist(object sender, RoutedEventArgs e)
+        { 
             _log.Info("Update selected playlist");
             // Local variables
             string playListId = "";
@@ -82,9 +100,16 @@ namespace Youtuber2._0
             string pathVideoFolder = "";
             string pathMp3Folder = "";
             string playlistTitle = "";
+            string selectedPlaylistID = "";
+            Boolean fileDownloaded = false;
+
+            this.Dispatcher.Invoke(() =>
+            {
+                selectedPlaylistID = comboboxPlaylistIDs.SelectedValue.ToString();
+            });
 
             // check if a playlist is selected
-            if (comboboxPlaylistIDs.SelectedValue == null)
+            if (selectedPlaylistID == null)
             {
                 MessageBox.Show("Make sure you selected a playlist.", "ERROR");
                 _log.Error("No playlist available to download or no playlist selected (impossible)");
@@ -99,7 +124,7 @@ namespace Youtuber2._0
             }
 
             //Get Playlist title
-            playlistTitle = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[0];
+            playlistTitle = selectedPlaylistID.Split(',')[0];
             playlistTitle = playlistTitle.Replace("[", "");
             _log.Info("Playlist title = " + playlistTitle);
 
@@ -109,7 +134,7 @@ namespace Youtuber2._0
             System.IO.Directory.CreateDirectory(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp");
 
             // Set variables
-            playListId = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[1];
+            playListId = selectedPlaylistID.Split(',')[1];
             playListId = playListId.Replace("]", "");
             pathVideoFiles  = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp\\");
             pathMp3Files    = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
@@ -144,6 +169,9 @@ namespace Youtuber2._0
             // Loop over every videofile
             foreach (var videoObject in allVideoIds)
             {
+                Stopwatch stopWatchFile = new Stopwatch();
+                stopWatchFile.Start();
+
                 var youtube = YouTube.Default;
                 
                 try
@@ -169,6 +197,7 @@ namespace Youtuber2._0
                     // Write video to file if mp3 version doesn't exist yet
                     if (!File.Exists(pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3")))
                     {
+                        fileDownloaded = true;
                         byte[] content = null;
                         _log.Info("File did not exist = " + pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3"));
                         for (int attempts = 0; attempts < 5; attempts++)
@@ -199,23 +228,32 @@ namespace Youtuber2._0
                             throw new System.ArgumentException("Something went wrong when retrieving the video!", "See logging for more info");
                         }
                     }
+                    else
+                    {
+                        _log.Info("File already exists.");
+                    }
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("Error during retrieving or writing videofile! Try again or contact the creator if the problem persits.");
                     _log.Info("Error during retrieving or writing video = " + ex.Message);
                 }
+                stopWatchFile.Stop();
+                _log.Info("File downloaded in : " + stopWatchFile.Elapsed + " seconds.");
             }
 
             // Run batch file to convert videos to mp3 with ffmpeg
             // and delete files when done via event
-            _log.Info("All videos finished, starting VideoToMp3.bat script");
-            Process proc = new Process();
-            proc.Exited += new EventHandler(p_Exited);
-            proc.StartInfo.FileName = "VideoToMp3.bat";
-            proc.StartInfo.Arguments = String.Format("{0} {1}", pathVideoFiles, pathMp3Files);
-            proc.EnableRaisingEvents = true;
-            proc.Start();
+            if (fileDownloaded == true)
+            {
+                _log.Info("All videos finished, starting VideoToMp3.bat script");
+                Process proc = new Process();
+                proc.Exited += new EventHandler(p_Exited);
+                proc.StartInfo.FileName = "VideoToMp3.bat";
+                proc.StartInfo.Arguments = String.Format("{0} {1}", pathVideoFiles, pathMp3Files);
+                proc.EnableRaisingEvents = true;
+                proc.Start();
+            }
         }
 
         void p_Exited(object sender, EventArgs e)
@@ -252,6 +290,92 @@ namespace Youtuber2._0
         private void btnUpdateAllPlaylists_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("NOT YET IMPLEMENTED", "ERROR");
+        }
+
+        private void btnGetVideoUrlFile_Click(object sender, RoutedEventArgs e)
+        {
+            _log.Info("Update selected playlist");
+            // Local variables
+            string playListId = "";
+            IList<string> urlList = new List<string>();
+            string playlistTitle = "";
+
+            // check if a playlist is selected
+            if (comboboxPlaylistIDs.SelectedValue == null)
+            {
+                MessageBox.Show("Make sure you selected a playlist.", "ERROR");
+                _log.Error("No playlist available to download or no playlist selected (impossible)");
+                return;
+            }
+
+            //Get Playlist title
+            playlistTitle = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[0];
+            playlistTitle = playlistTitle.Replace("[", "");
+            _log.Info("Playlist title = " + playlistTitle);
+
+            // Set variables
+            playListId = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[1];
+            playListId = playListId.Replace("]", "");
+
+            // Get all video IDs from the YouTube playlist
+            dynamic allVideoIds;
+            try
+            {
+                allVideoIds = GetIDs.GetVideosInPlayListAsync(playListId).Result;
+                _log.Info("Retrieved all video IDs");
+            }
+            catch (Exception ex)
+            {
+                _log.Fatal("Error retrieving all video IDs = " + ex.Message);
+                MessageBox.Show("Error retrieving all video IDs! Contact the creator!");
+                return;
+            }
+
+            // Check if IDs where found
+            if (allVideoIds.Count == 0)
+            {
+                MessageBox.Show("Empty playlist?");
+                _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
+                return;
+            }
+
+            // Loop over every videofile
+            foreach (var videoObject in allVideoIds)
+            {
+                 urlList.Add("http://www.youtube.com/watch?v=" + (string)videoObject.Id);
+            }
+
+            TextWriter tw = new StreamWriter("UrlList.txt");
+
+            foreach (String s in urlList)
+            {
+                tw.WriteLine(s);
+            }
+            tw.Close();
+
+            Process.Start("UrlList.txt");
+        }
+
+        private void disableButtons()
+        {
+            btnGetVideoUrlFile.IsEnabled = false;
+            btnUpdateSelectedPlaylist.IsEnabled = false;
+            btnSettings.IsEnabled = false;
+            btnContent.IsEnabled = false;
+            btnRefresh.IsEnabled = false;
+            btnUpdateAllPlaylists.IsEnabled = false;
+            comboboxPlaylistIDs.IsEnabled = false;
+        }
+
+        private void enableButtons()
+        {
+            btnGetVideoUrlFile.IsEnabled = true;
+            btnUpdateSelectedPlaylist.IsEnabled = true;
+            btnSettings.IsEnabled = true;
+            btnContent.IsEnabled = true;
+            btnRefresh.IsEnabled = true;
+            btnUpdateAllPlaylists.IsEnabled = true;
+            comboboxPlaylistIDs.IsEnabled = true;
         }
     }
 }
