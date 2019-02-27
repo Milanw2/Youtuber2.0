@@ -65,7 +65,6 @@ namespace Youtuber2._0
             catch (Exception ex)
             {
                 // No playlist was found prob
-                MessageBox.Show(ex.InnerException.Message + " EXTRA: There is probably something wrong with your playlist ID. See manual for more information", "ERROR");
                 _log.Fatal(ex.InnerException.Message + "There is probably something wrong with your playlist ID. See manual for more information");
             }
             
@@ -111,14 +110,12 @@ namespace Youtuber2._0
             // check if a playlist is selected
             if (selectedPlaylistID == null)
             {
-                MessageBox.Show("Make sure you selected a playlist.", "ERROR");
                 _log.Error("No playlist available to download or no playlist selected (impossible)");
                 return;
             }
             // Check default folder is filled in
             if (Properties.Settings.Default.FilePath == null || Properties.Settings.Default.FilePath.ToString() == "")
             {
-                MessageBox.Show("Default folder not selected", "ERROR");
                 _log.Error("No default folder is selected");
                 return;
             }
@@ -154,14 +151,12 @@ namespace Youtuber2._0
             catch (Exception ex)
             {
                 _log.Fatal("Error retrieving all video IDs = " + ex.Message);
-                MessageBox.Show("Error retrieving all video IDs! Contact the creator!");
                 return;
             }
 
             // Check if IDs where found
             if (allVideoIds.Count == 0)
             {
-                MessageBox.Show("Empty playlist?");
                 _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
                 return;
             }
@@ -235,7 +230,6 @@ namespace Youtuber2._0
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error during retrieving or writing videofile! Try again or contact the creator if the problem persits.");
                     _log.Info("Error during retrieving or writing video = " + ex.Message);
                 }
                 stopWatchFile.Stop();
@@ -303,7 +297,6 @@ namespace Youtuber2._0
             // check if a playlist is selected
             if (comboboxPlaylistIDs.SelectedValue == null)
             {
-                MessageBox.Show("Make sure you selected a playlist.", "ERROR");
                 _log.Error("No playlist available to download or no playlist selected (impossible)");
                 return;
             }
@@ -327,14 +320,12 @@ namespace Youtuber2._0
             catch (Exception ex)
             {
                 _log.Fatal("Error retrieving all video IDs = " + ex.Message);
-                MessageBox.Show("Error retrieving all video IDs! Contact the creator!");
                 return;
             }
 
             // Check if IDs where found
             if (allVideoIds.Count == 0)
             {
-                MessageBox.Show("Empty playlist?");
                 _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
                 return;
             }
