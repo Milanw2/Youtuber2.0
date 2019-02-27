@@ -189,7 +189,7 @@ namespace Youtuber2._0
                     }
                     _log.Info("Choosen video audio bitrate = " + videoHighRes.AudioBitrate + " for video " + videoHighRes.FullName);
 
-                    // Write video to file if mp3 version doesn't exist yet
+                    // Write video to file if mp3 version doesn't exist yet 
                     if (!File.Exists(pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3")))
                     {
                         fileDownloaded = true;
