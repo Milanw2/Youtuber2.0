@@ -15,7 +15,7 @@ namespace Youtuber2._0
     public class GetIDs
     {
         public static readonly ILog _log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-        public static async Task<dynamic> GetVideosInPlayListAsync(string playListId)
+        public static async Task<List<VideoObject>> GetVideosInPlayListAsync(string playListId)
         {
             List<VideoObject> videoObjects = new List<VideoObject>();
 
@@ -96,10 +96,10 @@ namespace Youtuber2._0
             }
             catch (Exception ex)
             {
-                _log.Error(ex.Message);
+                _log.Error("Error during retrieving of the video IDs: " + ex.Message);
                 throw;
             }
-            return default(dynamic);
+            return default(List<VideoObject>);
         }
 
         private static string MakeUrlWithQuery(string baseUrl,

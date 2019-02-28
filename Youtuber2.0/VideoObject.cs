@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Youtuber2._0
 {
-    internal class VideoObject
+    public class VideoObject
     {
         public string Id { get; set; }
         public string Title { get; set; }

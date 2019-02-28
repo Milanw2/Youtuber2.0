@@ -153,6 +153,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="API.cs" />
     <Compile Include="GetAllVideoTitles.cs" />
     <Compile Include="GetIDs.cs" />
     <Compile Include="GetPlaylistName.cs" />

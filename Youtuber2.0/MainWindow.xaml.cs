@@ -19,6 +19,7 @@ using System.IO;
 using log4net;
 using System.Reflection;
 using log4net.Config;
+using System.Threading;
 
 namespace Youtuber2._0
 {
@@ -28,6 +29,21 @@ namespace Youtuber2._0
     public partial class MainWindow : Window
     {
         string tmpDirectory = "";
+
+        // Global variables
+        string playListId;
+        string pathMp3Files;
+        string pathVideoFiles;
+        string pathVideoFolder;
+        string pathMp3Folder;
+        string playlistTitle;
+        string selectedPlaylistID;
+        Boolean fileDownloaded;
+        List<VideoObject> allVideoIds = new List<VideoObject>();
+        Stopwatch total = new Stopwatch();
+
+        API api = new API();
+
         // log4net
         public static readonly ILog _log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         public MainWindow()
@@ -35,6 +51,21 @@ namespace Youtuber2._0
             InitializeComponent();
             RefreshPage();
             XmlConfigurator.Configure();
+            InitVariables();
+            _log.Info("Application opened");
+        }
+
+        private void InitVariables()
+        {
+            playListId = "";
+            pathMp3Files = "";
+            pathVideoFiles = "";
+            pathVideoFolder = "";
+            pathMp3Folder = "";
+            playlistTitle = "";
+            selectedPlaylistID = "";
+            fileDownloaded = false;
+            allVideoIds.Clear();
         }
 
         private void btnSettings_Click(object sender, RoutedEventArgs e)
@@ -90,36 +121,135 @@ namespace Youtuber2._0
         }
 
         private void UpdateSelectedPlaylist(object sender, RoutedEventArgs e)
-        { 
-            _log.Info("Update selected playlist");
-            // Local variables
-            string playListId = "";
-            string pathMp3Files = "";
-            string pathVideoFiles = "";
-            string pathVideoFolder = "";
-            string pathMp3Folder = "";
-            string playlistTitle = "";
-            string selectedPlaylistID = "";
-            Boolean fileDownloaded = false;
-
-            this.Dispatcher.Invoke(() =>
+        {
+            try
             {
-                selectedPlaylistID = comboboxPlaylistIDs.SelectedValue.ToString();
-            });
+                total.Start();
+                _log.Info("Update selected playlist");
 
-            // check if a playlist is selected
-            if (selectedPlaylistID == null)
-            {
-                _log.Error("No playlist available to download or no playlist selected (impossible)");
-                return;
+                // Get selected playlist ID
+                this.Dispatcher.Invoke(() =>
+                {
+                    selectedPlaylistID = comboboxPlaylistIDs.SelectedValue.ToString();
+                });
+
+                // Default checks
+                if (!DefaultChecks())
+                {
+                    MessageBox.Show("Default checks failed. See logging for more details.");
+                    return;
+                }
+
+                // Fill variables (playlistTitle, playlistId, pathVideoFiles, pathMp3Files, pathVideoFolder, tmpDirectory, pathMp3Folder)
+                // and create missing directories if they don't exist yet
+                SetVariablesAndDirectories();
+                
+                // Get all video IDs from the YouTube playlist
+                allVideoIds = GetIDs.GetVideosInPlayListAsync(playListId).Result;
+
+                // Check if IDs where found
+                if (allVideoIds.Count == 0)
+                {
+                    _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
+                    MessageBox.Show("Empty playlist?");
+                    return;
+                }
+
+                // Loop over every videofile in parallel (how much threads is automatically determined based on the specs of the computer
+                _log.Info("Multi threaded retrieval is starting...");
+
+                // Run batch file to convert videos to mp3 with ffmpeg
+                // and delete files when done via event
+                // if there where files downloaded
+                if (api.ProcessVideosParallel(allVideoIds, pathMp3Files, fileDownloaded, pathVideoFiles))
+                {
+                    VideoToMp3();
+                }
+                // Reset variables just to be sure
+                InitVariables();
             }
-            // Check default folder is filled in
-            if (Properties.Settings.Default.FilePath == null || Properties.Settings.Default.FilePath.ToString() == "")
+            catch (Exception ex)
             {
-                _log.Error("No default folder is selected");
-                return;
+                MessageBox.Show("Fatal error, send file 'proper.log' to me!");
+                _log.Error("Fatal error: " + ex.Message);
             }
+        }
 
+        private async void btnUpdateSelectedPlaylistSlow_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Stopwatch stopWatch = new Stopwatch();
+                stopWatch.Start();
+                disableButtons();
+                await Task.Run(() => this.UpdateSelectedPlaylistSlow_(sender, e));
+                enableButtons();
+                stopWatch.Stop();
+                _log.Info("All files where downloaded in : " + stopWatch.Elapsed + " seconds.");
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex.ToString());
+            }
+        }
+
+        private void UpdateSelectedPlaylistSlow_(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                total.Start();
+                _log.Info("Update selected playlist");
+
+                // Get selected playlist ID
+                this.Dispatcher.Invoke(() =>
+                {
+                    selectedPlaylistID = comboboxPlaylistIDs.SelectedValue.ToString();
+                });
+
+                // Default checks
+                if (!DefaultChecks())
+                {
+                    MessageBox.Show("Default checks failed. See logging for more details.");
+                    return;
+                }
+
+                // Fill variables (playlistTitle, playlistId, pathVideoFiles, pathMp3Files, pathVideoFolder, tmpDirectory, pathMp3Folder)
+                // and create missing directories if they don't exist yet
+                SetVariablesAndDirectories();
+
+                // Get all video IDs from the YouTube playlist
+                allVideoIds = GetIDs.GetVideosInPlayListAsync(playListId).Result;
+
+                // Check if IDs where found
+                if (allVideoIds.Count == 0)
+                {
+                    _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
+                    MessageBox.Show("Empty playlist?");
+                    return;
+                }
+
+                // Loop over every videofile in parallel (how much threads is automatically determined based on the specs of the computer
+                _log.Info("Normal slow retrieval is starting...");
+
+                // Run batch file to convert videos to mp3 with ffmpeg
+                // and delete files when done via event
+                // if there where files downloaded
+                if (api.ProcessVideos(allVideoIds, pathMp3Files, fileDownloaded, pathVideoFiles))
+                {
+                    VideoToMp3();
+                }
+                // Reset variables just to be sure
+                InitVariables();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Fatal error, send file 'proper.log' to me!");
+                _log.Error("Fatal error: " + ex.Message);
+            }
+        }
+
+        private void SetVariablesAndDirectories()
+        {
             //Get Playlist title
             playlistTitle = selectedPlaylistID.Split(',')[0];
             playlistTitle = playlistTitle.Replace("[", "");
@@ -133,124 +263,43 @@ namespace Youtuber2._0
             // Set variables
             playListId = selectedPlaylistID.Split(',')[1];
             playListId = playListId.Replace("]", "");
-            pathVideoFiles  = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp\\");
-            pathMp3Files    = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
+            pathVideoFiles = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp\\");
+            pathMp3Files = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
             _log.Info("Mp3 file path = " + pathMp3Files);
             pathVideoFolder = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp");
-            tmpDirectory    = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp");
-            pathMp3Folder   = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle);
-
-
-            // Get all video IDs from the YouTube playlist
-            dynamic allVideoIds;
-            try
-            {
-                allVideoIds = GetIDs.GetVideosInPlayListAsync(playListId).Result;
-                _log.Info("Retrieved all video IDs");
-            }
-            catch (Exception ex)
-            {
-                _log.Fatal("Error retrieving all video IDs = " + ex.Message);
-                return;
-            }
-
-            // Check if IDs where found
-            if (allVideoIds.Count == 0)
-            {
-                _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
-                return;
-            }
-
-            // Loop over every videofile
-            foreach (var videoObject in allVideoIds)
-            {
-                Stopwatch stopWatchFile = new Stopwatch();
-                stopWatchFile.Start();
-
-                var youtube = YouTube.Default;
-                
-                try
-                {
-                    // Get all different videos
-                    var videos = YouTube.Default.GetAllVideos("http://www.youtube.com/watch?v=" + videoObject.Id);
-                    _log.Info("Retrieved different video objects for specific video");
-
-                    // Create object to store highest quality
-                    VideoLibrary.YouTubeVideo videoHighRes = null;
-                    int maxAudioBitrate = 0;
-
-                    foreach (var video in videos)
-                    {
-                        if (video.AudioBitrate > maxAudioBitrate && (video.FileExtension == ".mp4" || video.FileExtension == ".webm"))
-                        {
-                            maxAudioBitrate = video.AudioBitrate;
-                            videoHighRes = video;
-                        }
-                    }
-                    _log.Info("Choosen video audio bitrate = " + videoHighRes.AudioBitrate + " for video " + videoHighRes.FullName);
-
-                    // Write video to file if mp3 version doesn't exist yet 
-                    if (!File.Exists(pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3")))
-                    {
-                        fileDownloaded = true;
-                        byte[] content = null;
-                        _log.Info("File did not exist = " + pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3"));
-                        for (int attempts = 0; attempts < 5; attempts++)
-                        // if you really want to keep going until it works, use   for(;;)
-                        {
-                            try
-                            {
-                                _log.Info("Attempt number : " + attempts + " of file " + videoHighRes.Title);
-                                content = videoHighRes.GetBytes();
-                                break;
-                            }
-                            catch (Exception x)
-                            {
-                                _log.Error("Error in retry " + attempts + " with message : " + x.Message);
-                            }
-                            System.Threading.Thread.Sleep(1000); // Possibly a good idea to pause here
-                        }
-
-                        if (content != null)
-                        {
-                            _log.Info("Retrieved video data");
-                            System.IO.File.WriteAllBytes(pathVideoFiles + videoHighRes.FullName, content);
-                            _log.Info("Wrote file to disk = " + pathVideoFiles + videoHighRes.FullName);
-                        }
-                        else
-                        {
-                            _log.Error("See above for more info");
-                            throw new System.ArgumentException("Something went wrong when retrieving the video!", "See logging for more info");
-                        }
-                    }
-                    else
-                    {
-                        _log.Info("File already exists.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _log.Info("Error during retrieving or writing video = " + ex.Message);
-                }
-                stopWatchFile.Stop();
-                _log.Info("File downloaded in : " + stopWatchFile.Elapsed + " seconds.");
-            }
-
-            // Run batch file to convert videos to mp3 with ffmpeg
-            // and delete files when done via event
-            if (fileDownloaded == true)
-            {
-                _log.Info("All videos finished, starting VideoToMp3.bat script");
-                Process proc = new Process();
-                proc.Exited += new EventHandler(p_Exited);
-                proc.StartInfo.FileName = "VideoToMp3.bat";
-                proc.StartInfo.Arguments = String.Format("{0} {1}", pathVideoFiles, pathMp3Files);
-                proc.EnableRaisingEvents = true;
-                proc.Start();
-            }
+            tmpDirectory = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp");
+            pathMp3Folder = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle);
         }
 
-        void p_Exited(object sender, EventArgs e)
+        private bool DefaultChecks()
+        {
+            // check if a playlist is selected
+            if (selectedPlaylistID == null)
+            {
+                _log.Error("No playlist available to download or no playlist selected (impossible)");
+                return false;
+            }
+            // Check default folder is filled in
+            if (Properties.Settings.Default.FilePath == null || Properties.Settings.Default.FilePath.ToString() == "")
+            {
+                _log.Error("No default folder is selected");
+                return false;
+            }
+
+            return true;
+        }
+
+        private void VideoToMp3()
+        {
+            _log.Info("All videos finished, starting VideoToMp3.bat script");
+            Process proc = new Process();
+            proc.Exited += new EventHandler(process_Exited);
+            proc.StartInfo.FileName = "VideoToMp3.bat";
+            proc.StartInfo.Arguments = String.Format("{0} {1}", pathVideoFiles, pathMp3Files);
+            proc.EnableRaisingEvents = true;
+            proc.Start();
+        }
+        void process_Exited(object sender, EventArgs e)
         {
             System.IO.DirectoryInfo di = new DirectoryInfo(tmpDirectory);
 
@@ -258,7 +307,9 @@ namespace Youtuber2._0
             {
                 file.Delete();
             }
+            total.Stop();
             _log.Info("tmp folder cleared");
+            _log.Info("Total processing of playlist time: " + total.Elapsed);
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
@@ -271,9 +322,16 @@ namespace Youtuber2._0
         {
             // Map Playlist IDs to playlist names
             var map = new Dictionary<string, string>();
-            foreach (string item in Properties.Settings.Default.PlaylistIDs)
+            try
             {
-                map.Add(GetPlaylistName.GetPlaylistNameAsync(item).Result, item);
+                foreach (string item in Properties.Settings.Default.PlaylistIDs)
+                {
+                    map.Add(GetPlaylistName.GetPlaylistNameAsync(item).Result, item);
+                }
+            }
+            catch (Exception e)
+            {
+                _log.Error("Error during retrieving playlist names." + e.Message);
             }
 
             comboboxPlaylistIDs.ItemsSource = map;
@@ -356,6 +414,7 @@ namespace Youtuber2._0
             btnRefresh.IsEnabled = false;
             btnUpdateAllPlaylists.IsEnabled = false;
             comboboxPlaylistIDs.IsEnabled = false;
+            btnUpdateSelectedPlaylistSlow.IsEnabled = false;
         }
 
         private void enableButtons()
@@ -367,6 +426,8 @@ namespace Youtuber2._0
             btnRefresh.IsEnabled = true;
             btnUpdateAllPlaylists.IsEnabled = true;
             comboboxPlaylistIDs.IsEnabled = true;
+            btnUpdateSelectedPlaylistSlow.IsEnabled = true;
         }
+        
     }
 }
