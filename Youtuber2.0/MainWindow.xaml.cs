@@ -28,6 +28,12 @@ namespace Youtuber2._0
     /// </summary>
     public partial class MainWindow : Window
     {
+        // TODO: Future feature list :
+        // Update total time (not resetted after finishing playlist)
+        // Add logic to update all the playlist with btnUpdateAllPlaylists_Click
+        // Add logging (configurable with all or only ERROR) to the UI
+        // Add counter (sort of progressbar maybe?)
+
         string tmpDirectory = "";
 
         // Global variables
@@ -40,7 +46,7 @@ namespace Youtuber2._0
         string selectedPlaylistID;
         Boolean fileDownloaded;
         List<VideoObject> allVideoIds = new List<VideoObject>();
-        Stopwatch total = new Stopwatch();
+        Stopwatch total;
 
         API api = new API();
 
@@ -52,7 +58,7 @@ namespace Youtuber2._0
             RefreshPage();
             XmlConfigurator.Configure();
             InitVariables();
-            _log.Info("Application opened");
+            _log.Info("Application opened"); 
         }
 
         private void InitVariables()
@@ -66,18 +72,19 @@ namespace Youtuber2._0
             selectedPlaylistID = "";
             fileDownloaded = false;
             allVideoIds.Clear();
+            total = new Stopwatch();
         }
 
         private void btnSettings_Click(object sender, RoutedEventArgs e)
         {
             SettingsWindow SettingsWindow = new SettingsWindow();
             SettingsWindow.Show();
-            _log.Info("Settings Window opened");
+            _log.Debug("Settings Window opened");
         }
 
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
-            _log.Info("Application closed");
+            _log.Debug("Application closed");
             this.Close();
         }
 
@@ -86,12 +93,12 @@ namespace Youtuber2._0
             string playListId = "";
             playListId = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[1];
             playListId = playListId.Replace("]", "");
-            _log.Info("Playlist selection changed to : " + playListId);
+            _log.Debug("Playlist selection changed to : " + playListId);
             // Retrieve list of all videos
             try
             {
                 listbox_logging.ItemsSource = GetAllVideoTitles.GetVideoTitlesInPlayListAsync(playListId).Result;
-                _log.Info("Successfully retrieved playlist items");
+                _log.Debug("Successfully retrieved playlist items");
             }
             catch (Exception ex)
             {
@@ -125,7 +132,6 @@ namespace Youtuber2._0
             try
             {
                 total.Start();
-                _log.Info("Update selected playlist");
 
                 // Get selected playlist ID
                 this.Dispatcher.Invoke(() =>
@@ -156,7 +162,7 @@ namespace Youtuber2._0
                 }
 
                 // Loop over every videofile in parallel (how much threads is automatically determined based on the specs of the computer
-                _log.Info("Multi threaded retrieval is starting...");
+                _log.Debug("Multi threaded retrieval is starting...");
 
                 // Run batch file to convert videos to mp3 with ffmpeg
                 // and delete files when done via event
@@ -198,7 +204,6 @@ namespace Youtuber2._0
             try
             {
                 total.Start();
-                _log.Info("Update selected playlist");
 
                 // Get selected playlist ID
                 this.Dispatcher.Invoke(() =>
@@ -229,7 +234,7 @@ namespace Youtuber2._0
                 }
 
                 // Loop over every videofile in parallel (how much threads is automatically determined based on the specs of the computer
-                _log.Info("Normal slow retrieval is starting...");
+                _log.Debug("Normal slow retrieval is starting...");
 
                 // Run batch file to convert videos to mp3 with ffmpeg
                 // and delete files when done via event
@@ -254,7 +259,7 @@ namespace Youtuber2._0
             playlistTitle = selectedPlaylistID.Split(',')[0];
             playlistTitle = playlistTitle.Replace("[", "");
             playlistTitle = playlistTitle.Replace(" ", "");
-            _log.Info("Playlist title = " + playlistTitle);
+            _log.Debug("Playlist title = " + playlistTitle);
 
             // Create folders if they don't already exists
             System.IO.Directory.CreateDirectory(Properties.Settings.Default.FilePath + "\\Youtuber");
@@ -266,7 +271,7 @@ namespace Youtuber2._0
             playListId = playListId.Replace("]", "");
             pathVideoFiles = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp\\");
             pathMp3Files = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
-            _log.Info("Mp3 file path = " + pathMp3Files);
+            _log.Debug("Mp3 file path = " + pathMp3Files);
             pathVideoFolder = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp");
             tmpDirectory = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp");
             pathMp3Folder = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle);
@@ -292,7 +297,7 @@ namespace Youtuber2._0
 
         private void VideoToMp3()
         {
-            _log.Info("All videos finished, starting VideoToMp3.bat script");
+            _log.Debug("All videos finished, starting VideoToMp3.bat script");
             Process proc = new Process();
             proc.Exited += new EventHandler(process_Exited);
             proc.StartInfo.FileName = "VideoToMp3.bat";
@@ -309,14 +314,15 @@ namespace Youtuber2._0
                 file.Delete();
             }
             total.Stop();
-            _log.Info("tmp folder cleared");
+            _log.Debug("tmp folder cleared");
             _log.Info("Total processing of playlist time: " + total.Elapsed);
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
         {
+            _log.Debug("Refreshing page");
             RefreshPage();
-            _log.Info("Page refreshed");
+            _log.Debug("Page refreshed");
         }
 
         public void RefreshPage()
@@ -337,7 +343,6 @@ namespace Youtuber2._0
 
             comboboxPlaylistIDs.ItemsSource = map;
             comboboxPlaylistIDs.SelectedIndex = 0;
-            _log.Info("Playlist dropdown refreshed");
         }
 
         private void btnUpdateAllPlaylists_Click(object sender, RoutedEventArgs e)
@@ -347,7 +352,6 @@ namespace Youtuber2._0
 
         private void btnGetVideoUrlFile_Click(object sender, RoutedEventArgs e)
         {
-            _log.Info("Update selected playlist");
             // Local variables
             string playListId = "";
             IList<string> urlList = new List<string>();
@@ -363,7 +367,6 @@ namespace Youtuber2._0
             //Get Playlist title
             playlistTitle = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[0];
             playlistTitle = playlistTitle.Replace("[", "");
-            _log.Info("Playlist title = " + playlistTitle);
 
             // Set variables
             playListId = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[1];
@@ -374,7 +377,6 @@ namespace Youtuber2._0
             try
             {
                 allVideoIds = GetIDs.GetVideosInPlayListAsync(playListId).Result;
-                _log.Info("Retrieved all video IDs");
             }
             catch (Exception ex)
             {

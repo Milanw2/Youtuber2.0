@@ -25,13 +25,14 @@ namespace Youtuber2._0
                     Stopwatch stopWatchFile = new Stopwatch();
                     stopWatchFile.Start();
 
+                    _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Processing: " + videoObject.Title);
+
                     var youtube = YouTube.Default;
 
                     try
                     {
                         // Get all different videos
                         var videos = YouTube.Default.GetAllVideos("http://www.youtube.com/watch?v=" + videoObject.Id);
-                        _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Retrieved different video objects for specific video");
 
                         // Create object to store highest quality
                         VideoLibrary.YouTubeVideo videoHighRes = null;
@@ -45,53 +46,53 @@ namespace Youtuber2._0
                                 videoHighRes = video;
                             }
                         }
-                        _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Choosen video audio bitrate = " + videoHighRes.AudioBitrate + " for video " + videoHighRes.FullName);
+                        _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Audio bitrate = " + videoHighRes.AudioBitrate + " => " + videoHighRes.FullName);
 
                         // Write video to file if mp3 version doesn't exist yet 
                         if (!File.Exists(pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3")))
                         {
                             fileDownloaded = true;
                             byte[] content = null;
-                            _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => File did not exist = " + pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3"));
                             for (int attempts = 0; attempts < 5; attempts++)
                             // if you really want to keep going until it works, use   for(;;)
                             {
                                 try
                                 {
-                                    _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Attempt number : " + attempts + " of file " + videoHighRes.Title);
+                                    _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Attempt number : " + attempts + " of file " + videoHighRes.Title);
                                     content = videoHighRes.GetBytes();
                                     break;
                                 }
                                 catch (Exception x)
                                 {
-                                    _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in retry " + attempts + " with message : " + x.Message);
+                                    _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in retry " + attempts + " with message : " + x.Message);
                                 }
                                 System.Threading.Thread.Sleep(1000); // Possibly a good idea to pause here
                             }
 
                             if (content != null)
                             {
-                                _log.Info($"Thread: { Thread.CurrentThread.ManagedThreadId} => Retrieved video data");
+                                _log.Debug($"Thread: { Thread.CurrentThread.ManagedThreadId} => Retrieved video data");
                                 System.IO.File.WriteAllBytes(pathVideoFiles + videoHighRes.FullName, content);
-                                _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Wrote file to disk = " + pathVideoFiles + videoHighRes.FullName);
+                                _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Wrote file to disk = " + pathVideoFiles + videoHighRes.FullName);
                             }
                             else
                             {
-                                _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => See above for more info");
+                                _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error with video : " + videoObject.Title);
                                 throw new System.ArgumentException($"Thread : {Thread.CurrentThread.ManagedThreadId} => Something went wrong when retrieving the video!", "See logging for more info");
                             }
                         }
                         else
                         {
-                            _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => File already exists.");
+                            _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => File already exists.");
                         }
                     }
                     catch (Exception ex)
                     {
-                        _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video = " + ex.Message);
+                        _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video = " + ex.Message);
                     }
                     stopWatchFile.Stop();
-                    _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => File downloaded in : " + stopWatchFile.Elapsed + " seconds.");
+                    _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => File downloaded in : " + stopWatchFile.Elapsed + " seconds.");
+                    _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Downloaded : " + videoObject.Title);
                 });
             }
             catch (Exception e)
@@ -111,13 +112,14 @@ namespace Youtuber2._0
                     Stopwatch stopWatchFile = new Stopwatch();
                     stopWatchFile.Start();
 
+                    _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Processing: " + videoObject.Title);
+
                     var youtube = YouTube.Default;
 
                     try
                     {
                         // Get all different videos
                         var videos = YouTube.Default.GetAllVideos("http://www.youtube.com/watch?v=" + videoObject.Id);
-                        _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Retrieved different video objects for specific video");
 
                         // Create object to store highest quality
                         VideoLibrary.YouTubeVideo videoHighRes = null;
@@ -131,53 +133,53 @@ namespace Youtuber2._0
                                 videoHighRes = video;
                             }
                         }
-                        _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Choosen video audio bitrate = " + videoHighRes.AudioBitrate + " for video " + videoHighRes.FullName);
+                        _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Audio bitrate = " + videoHighRes.AudioBitrate + " => " + videoHighRes.FullName);
 
                         // Write video to file if mp3 version doesn't exist yet 
                         if (!File.Exists(pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3")))
                         {
                             fileDownloaded = true;
                             byte[] content = null;
-                            _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => File did not exist = " + pathMp3Files + videoHighRes.FullName.Replace(".webm", ".mp3").Replace(".mp4", ".mp3"));
                             for (int attempts = 0; attempts < 5; attempts++)
                             // if you really want to keep going until it works, use   for(;;)
                             {
                                 try
                                 {
-                                    _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Attempt number : " + attempts + " of file " + videoHighRes.Title);
+                                    _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Attempt number : " + attempts + " of file " + videoHighRes.Title);
                                     content = videoHighRes.GetBytes();
                                     break;
                                 }
                                 catch (Exception x)
                                 {
-                                    _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in retry " + attempts + " with message : " + x.Message);
+                                    _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in retry " + attempts + " with message : " + x.Message);
                                 }
                                 System.Threading.Thread.Sleep(1000); // Possibly a good idea to pause here
                             }
 
                             if (content != null)
                             {
-                                _log.Info($"Thread: { Thread.CurrentThread.ManagedThreadId} => Retrieved video data");
+                                _log.Debug($"Thread: { Thread.CurrentThread.ManagedThreadId} => Retrieved video data");
                                 System.IO.File.WriteAllBytes(pathVideoFiles + videoHighRes.FullName, content);
-                                _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Wrote file to disk = " + pathVideoFiles + videoHighRes.FullName);
+                                _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Wrote file to disk = " + pathVideoFiles + videoHighRes.FullName);
                             }
                             else
                             {
-                                _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => See above for more info");
+                                _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error with video : " + videoObject.Title);
                                 throw new System.ArgumentException($"Thread : {Thread.CurrentThread.ManagedThreadId} => Something went wrong when retrieving the video!", "See logging for more info");
                             }
                         }
                         else
                         {
-                            _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => File already exists.");
+                            _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => File already exists.");
                         }
                     }
                     catch (Exception ex)
                     {
-                        _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video = " + ex.Message);
+                        _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video : " + videoObject.Title + " with error message: " + ex.Message);
                     }
                     stopWatchFile.Stop();
-                    _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => File downloaded in : " + stopWatchFile.Elapsed + " seconds.");
+                    _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => File downloaded in : " + stopWatchFile.Elapsed + " seconds.");
+                    _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Downloaded : " + videoObject.Title);
                 }
             }
             catch (Exception e)
