@@ -253,6 +253,7 @@ namespace Youtuber2._0
             //Get Playlist title
             playlistTitle = selectedPlaylistID.Split(',')[0];
             playlistTitle = playlistTitle.Replace("[", "");
+            playlistTitle = playlistTitle.Replace(" ", "");
             _log.Info("Playlist title = " + playlistTitle);
 
             // Create folders if they don't already exists
