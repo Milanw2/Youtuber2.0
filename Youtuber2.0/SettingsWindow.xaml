@@ -14,7 +14,7 @@
         <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Add or remove playlist IDs here." VerticalAlignment="Top" Width="283"/>
         <Button x:Name="btnDelete" Content="Delete" HorizontalAlignment="Left" Margin="387,67,0,0" VerticalAlignment="Top" Width="75" Click="btnDeleteClick" Panel.ZIndex="1"/>
         <Button x:Name="btnFolderBrowser" Content="Select destination folder" HorizontalAlignment="Left" Margin="632,34,0,0" VerticalAlignment="Top" Width="150" Click="btnFolderBrowser_Click"/>
-        <TextBlock x:Name="txtblockFilepath" HorizontalAlignment="Left" Margin="387,10,0,0" TextWrapping="Wrap" Text="TextBlock" VerticalAlignment="Top" Width="395"/>
+        <TextBlock x:Name="txtblockFilepath" HorizontalAlignment="Left" Margin="387,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="395"><Run Text="TextBlock"/></TextBlock>
         <Label x:Name="labelTitle" HorizontalAlignment="Left" Margin="387,122,0,0" VerticalAlignment="Top" Width="298" Height="25" FontSize="14"/>
         <Label Content="Title:" HorizontalAlignment="Left" Margin="387,92,0,0" VerticalAlignment="Top" Width="251" Height="25" FontSize="14"/>
 

@@ -102,8 +102,7 @@ namespace Youtuber2._0
             return default(List<VideoObject>);
         }
 
-        private static string MakeUrlWithQuery(string baseUrl,
-            IEnumerable<KeyValuePair<string, string>> parameters)
+        private static string MakeUrlWithQuery(string baseUrl, IEnumerable<KeyValuePair<string, string>> parameters)
         {
             if (string.IsNullOrEmpty(baseUrl))
                 throw new ArgumentNullException(nameof(baseUrl));

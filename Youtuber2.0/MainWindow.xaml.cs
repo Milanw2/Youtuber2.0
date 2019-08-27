@@ -20,6 +20,8 @@ using log4net;
 using System.Reflection;
 using log4net.Config;
 using System.Threading;
+using Telegram.Bot;
+using Telegram.Bot.Args;
 
 namespace Youtuber2._0
 {
@@ -29,22 +31,16 @@ namespace Youtuber2._0
     public partial class MainWindow : Window
     {
         // TODO: Future feature list :
-        // Update total time (not resetted after finishing playlist)
         // Add logic to update all the playlist with btnUpdateAllPlaylists_Click
         // Add logging (configurable with all or only ERROR) to the UI
         // Add counter (sort of progressbar maybe?)
 
-        string tmpDirectory = "";
-
         // Global variables
         string playListId;
         string pathMp3Files;
-        string pathVideoFiles;
-        string pathVideoFolder;
         string pathMp3Folder;
         string playlistTitle;
         string selectedPlaylistID;
-        Boolean fileDownloaded;
         List<VideoObject> allVideoIds = new List<VideoObject>();
         Stopwatch total;
 
@@ -58,19 +54,19 @@ namespace Youtuber2._0
             RefreshPage();
             XmlConfigurator.Configure();
             InitVariables();
-            _log.Info("Application opened"); 
+            api.init();
+            _log.Info("Application opened");
+            API.SendErrors = SendErrors.IsChecked.Value;
+            API.SendInfo = SendInfo.IsChecked.Value;
         }
 
         private void InitVariables()
         {
             playListId = "";
             pathMp3Files = "";
-            pathVideoFiles = "";
-            pathVideoFolder = "";
             pathMp3Folder = "";
             playlistTitle = "";
             selectedPlaylistID = "";
-            fileDownloaded = false;
             allVideoIds.Clear();
             total = new Stopwatch();
         }
@@ -103,7 +99,8 @@ namespace Youtuber2._0
             catch (Exception ex)
             {
                 // No playlist was found prob
-                _log.Fatal(ex.InnerException.Message + "There is probably something wrong with your playlist ID. See manual for more information");
+                _log.Error(ex.InnerException.Message + "There is probably something wrong with your playlist ID. See manual for more information");
+                api.TelegramBotSendError(ex.InnerException.Message + "There is probably something wrong with your playlist ID. See manual for more information");
             }
             
             label_amount.Content = listbox_logging.Items.Count.ToString();
@@ -113,17 +110,20 @@ namespace Youtuber2._0
         {
             try
             {
-                Stopwatch stopWatch = new Stopwatch();
-                stopWatch.Start();
+                Stopwatch total = new Stopwatch();
+                total.Start();
+
                 disableButtons();
                 await Task.Run(() => this.UpdateSelectedPlaylist(sender, e));
                 enableButtons();
-                stopWatch.Stop();
-                _log.Info("All files where downloaded in : " + stopWatch.Elapsed + " seconds.");
+
+                total.Stop();
+                api.TelegramBotSendInfo("Processed playlist in " + total.Elapsed + " seconds.");
             }
             catch (Exception ex)
             {
                 _log.Error(ex.ToString());
+                api.TelegramBotSendError(ex.ToString());
             }
         }
 
@@ -149,78 +149,8 @@ namespace Youtuber2._0
                 // Fill variables (playlistTitle, playlistId, pathVideoFiles, pathMp3Files, pathVideoFolder, tmpDirectory, pathMp3Folder)
                 // and create missing directories if they don't exist yet
                 SetVariablesAndDirectories();
-                
-                // Get all video IDs from the YouTube playlist
-                allVideoIds = GetIDs.GetVideosInPlayListAsync(playListId).Result;
 
-                // Check if IDs where found
-                if (allVideoIds.Count == 0)
-                {
-                    _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
-                    MessageBox.Show("Empty playlist?");
-                    return;
-                }
-
-                // Loop over every videofile in parallel (how much threads is automatically determined based on the specs of the computer
-                _log.Debug("Multi threaded retrieval is starting...");
-
-                // Run batch file to convert videos to mp3 with ffmpeg
-                // and delete files when done via event
-                // if there where files downloaded
-                if (api.ProcessVideosParallel(allVideoIds, pathMp3Files, fileDownloaded, pathVideoFiles))
-                {
-                    VideoToMp3();
-                }
-                // Reset variables just to be sure
-                InitVariables();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Fatal error, send file 'proper.log' to me!");
-                _log.Error("Fatal error: " + ex.Message);
-            }
-        }
-
-        private async void btnUpdateSelectedPlaylistSlow_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                Stopwatch stopWatch = new Stopwatch();
-                stopWatch.Start();
-                disableButtons();
-                await Task.Run(() => this.UpdateSelectedPlaylistSlow_(sender, e));
-                enableButtons();
-                stopWatch.Stop();
-                _log.Info("All files where downloaded in : " + stopWatch.Elapsed + " seconds.");
-            }
-            catch (Exception ex)
-            {
-                _log.Error(ex.ToString());
-            }
-        }
-
-        private void UpdateSelectedPlaylistSlow_(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                total.Start();
-
-                // Get selected playlist ID
-                this.Dispatcher.Invoke(() =>
-                {
-                    selectedPlaylistID = comboboxPlaylistIDs.SelectedValue.ToString();
-                });
-
-                // Default checks
-                if (!DefaultChecks())
-                {
-                    MessageBox.Show("Default checks failed. See logging for more details.");
-                    return;
-                }
-
-                // Fill variables (playlistTitle, playlistId, pathVideoFiles, pathMp3Files, pathVideoFolder, tmpDirectory, pathMp3Folder)
-                // and create missing directories if they don't exist yet
-                SetVariablesAndDirectories();
+                api.TelegramBotSendInfo("Processing: " + playlistTitle);
 
                 // Get all video IDs from the YouTube playlist
                 allVideoIds = GetIDs.GetVideosInPlayListAsync(playListId).Result;
@@ -229,26 +159,21 @@ namespace Youtuber2._0
                 if (allVideoIds.Count == 0)
                 {
                     _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
+                    api.TelegramBotSendError("Video IDs where retrieved but empty -> probably empty playlist");
                     MessageBox.Show("Empty playlist?");
                     return;
                 }
+                _log.Debug("Retrieval is starting...");
 
-                // Loop over every videofile in parallel (how much threads is automatically determined based on the specs of the computer
-                _log.Debug("Normal slow retrieval is starting...");
+                api.ProcessVideosToMp3(allVideoIds, pathMp3Files, playlistTitle);
 
-                // Run batch file to convert videos to mp3 with ffmpeg
-                // and delete files when done via event
-                // if there where files downloaded
-                if (api.ProcessVideos(allVideoIds, pathMp3Files, fileDownloaded, pathVideoFiles))
-                {
-                    VideoToMp3();
-                }
                 // Reset variables just to be sure
                 InitVariables();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Fatal error, send file 'proper.log' to me!");
+                api.TelegramBotSendError("Fatal error, send file 'proper.log' to me!");
                 _log.Error("Fatal error: " + ex.Message);
             }
         }
@@ -269,11 +194,8 @@ namespace Youtuber2._0
             // Set variables
             playListId = selectedPlaylistID.Split(',')[1];
             playListId = playListId.Replace("]", "");
-            pathVideoFiles = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp\\");
             pathMp3Files = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
             _log.Debug("Mp3 file path = " + pathMp3Files);
-            pathVideoFolder = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp");
-            tmpDirectory = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\tmp");
             pathMp3Folder = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle);
         }
 
@@ -283,6 +205,7 @@ namespace Youtuber2._0
             if (selectedPlaylistID == null)
             {
                 _log.Error("No playlist available to download or no playlist selected (impossible)");
+                api.TelegramBotSendError("No playlist available to download or no playlist selected (impossible)");
                 return false;
             }
             // Check default folder is filled in
@@ -293,29 +216,6 @@ namespace Youtuber2._0
             }
 
             return true;
-        }
-
-        private void VideoToMp3()
-        {
-            _log.Debug("All videos finished, starting VideoToMp3.bat script");
-            Process proc = new Process();
-            proc.Exited += new EventHandler(process_Exited);
-            proc.StartInfo.FileName = "VideoToMp3.bat";
-            proc.StartInfo.Arguments = String.Format("{0} {1}", pathVideoFiles, pathMp3Files);
-            proc.EnableRaisingEvents = true;
-            proc.Start();
-        }
-        void process_Exited(object sender, EventArgs e)
-        {
-            System.IO.DirectoryInfo di = new DirectoryInfo(tmpDirectory);
-
-            foreach (FileInfo file in di.GetFiles())
-            {
-                file.Delete();
-            }
-            total.Stop();
-            _log.Debug("tmp folder cleared");
-            _log.Info("Total processing of playlist time: " + total.Elapsed);
         }
 
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
@@ -339,6 +239,7 @@ namespace Youtuber2._0
             catch (Exception e)
             {
                 _log.Error("Error during retrieving playlist names." + e.Message);
+                api.TelegramBotSendError("Error during retrieving playlist names." + e.Message);
             }
 
             comboboxPlaylistIDs.ItemsSource = map;
@@ -347,7 +248,16 @@ namespace Youtuber2._0
 
         private void btnUpdateAllPlaylists_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("NOT YET IMPLEMENTED", "ERROR");
+            // Get selected playlist ID
+            this.Dispatcher.Invoke(() =>
+            {
+                selectedPlaylistID = comboboxPlaylistIDs.SelectedValue.ToString();
+            });
+
+            foreach (string playlistId in comboboxPlaylistIDs.ItemsSource)
+            {
+
+            }
         }
 
         private void btnGetVideoUrlFile_Click(object sender, RoutedEventArgs e)
@@ -361,6 +271,7 @@ namespace Youtuber2._0
             if (comboboxPlaylistIDs.SelectedValue == null)
             {
                 _log.Error("No playlist available to download or no playlist selected (impossible)");
+                api.TelegramBotSendError("No playlist available to download or no playlist selected (impossible)");
                 return;
             }
 
@@ -388,6 +299,7 @@ namespace Youtuber2._0
             if (allVideoIds.Count == 0)
             {
                 _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
+                api.TelegramBotSendError("Video IDs where retrieved but empty -> probably empty playlist");
                 return;
             }
 
@@ -417,7 +329,6 @@ namespace Youtuber2._0
             btnRefresh.IsEnabled = false;
             btnUpdateAllPlaylists.IsEnabled = false;
             comboboxPlaylistIDs.IsEnabled = false;
-            btnUpdateSelectedPlaylistSlow.IsEnabled = false;
         }
 
         private void enableButtons()
@@ -429,8 +340,16 @@ namespace Youtuber2._0
             btnRefresh.IsEnabled = true;
             btnUpdateAllPlaylists.IsEnabled = true;
             comboboxPlaylistIDs.IsEnabled = true;
-            btnUpdateSelectedPlaylistSlow.IsEnabled = true;
         }
-        
+
+        private void SendErrors_Checked(object sender, RoutedEventArgs e)
+        {
+            API.SendErrors = SendErrors.IsChecked.Value;
+        }
+
+        private void SendInfo_Checked(object sender, RoutedEventArgs e)
+        {
+            API.SendInfo = SendInfo.IsChecked.Value;
+        }
     }
 }
