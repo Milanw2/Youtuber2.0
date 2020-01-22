@@ -59,7 +59,6 @@ namespace Youtuber2._0
             API.SendErrors = SendErrors.IsChecked.Value;
             API.SendInfo = SendInfo.IsChecked.Value;
         }
-
         private void InitVariables()
         {
             playListId = "";
@@ -70,20 +69,17 @@ namespace Youtuber2._0
             allVideoIds.Clear();
             total = new Stopwatch();
         }
-
         private void btnSettings_Click(object sender, RoutedEventArgs e)
         {
             SettingsWindow SettingsWindow = new SettingsWindow();
             SettingsWindow.Show();
             _log.Debug("Settings Window opened");
         }
-
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             _log.Debug("Application closed");
             this.Close();
         }
-
         private void combobox_PlaylistIDs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             string playListId = "";
@@ -105,7 +101,6 @@ namespace Youtuber2._0
             
             label_amount.Content = listbox_logging.Items.Count.ToString();
         }
-
         private async void btnUpdateSelectedPlaylist_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -126,7 +121,6 @@ namespace Youtuber2._0
                 api.TelegramBotSendError(ex.ToString());
             }
         }
-
         private void UpdateSelectedPlaylist(object sender, RoutedEventArgs e)
         {
             try
@@ -177,7 +171,6 @@ namespace Youtuber2._0
                 _log.Error("Fatal error: " + ex.Message);
             }
         }
-
         private void SetVariablesAndDirectories()
         {
             //Get Playlist title
@@ -198,7 +191,6 @@ namespace Youtuber2._0
             _log.Debug("Mp3 file path = " + pathMp3Files);
             pathMp3Folder = Environment.ExpandEnvironmentVariables(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\" + playlistTitle);
         }
-
         private bool DefaultChecks()
         {
             // check if a playlist is selected
@@ -214,17 +206,14 @@ namespace Youtuber2._0
                 _log.Error("No default folder is selected");
                 return false;
             }
-
             return true;
         }
-
         private void btnRefresh_Click(object sender, RoutedEventArgs e)
         {
             _log.Debug("Refreshing page");
             RefreshPage();
             _log.Debug("Page refreshed");
         }
-
         public void RefreshPage()
         {
             // Map Playlist IDs to playlist names
@@ -245,10 +234,13 @@ namespace Youtuber2._0
             comboboxPlaylistIDs.ItemsSource = map;
             comboboxPlaylistIDs.SelectedIndex = 0;
         }
-
-        private void btnUpdateAllPlaylists_Click(object sender, RoutedEventArgs e)
+        private async void btnUpdateAllPlaylists_Click(object sender, RoutedEventArgs e)
         {
-            // Get selected playlist ID
+            int errorCount = 0;
+            Stopwatch total = new Stopwatch();
+            total.Start();
+            disableButtons();
+
             this.Dispatcher.Invoke(() =>
             {
                 selectedPlaylistID = comboboxPlaylistIDs.SelectedValue.ToString();
@@ -256,10 +248,22 @@ namespace Youtuber2._0
 
             foreach (string playlistId in comboboxPlaylistIDs.ItemsSource)
             {
-
+                try
+                {
+                    await Task.Run(() => this.UpdateSelectedPlaylist(sender, e));
+                }
+                catch (Exception ex)
+                {
+                    _log.Error(ex.ToString());
+                    api.TelegramBotSendError(ex.ToString());
+                    errorCount++;
+                }
             }
-        }
 
+            enableButtons();
+            total.Stop();
+            api.TelegramBotSendInfo("Processed all playlists in " + total.Elapsed + " seconds. Playlists in error count : " + errorCount);
+        }
         private void btnGetVideoUrlFile_Click(object sender, RoutedEventArgs e)
         {
             // Local variables
@@ -319,7 +323,6 @@ namespace Youtuber2._0
 
             Process.Start("UrlList.txt");
         }
-
         private void disableButtons()
         {
             btnGetVideoUrlFile.IsEnabled = false;
@@ -330,7 +333,6 @@ namespace Youtuber2._0
             btnUpdateAllPlaylists.IsEnabled = false;
             comboboxPlaylistIDs.IsEnabled = false;
         }
-
         private void enableButtons()
         {
             btnGetVideoUrlFile.IsEnabled = true;
@@ -341,13 +343,11 @@ namespace Youtuber2._0
             btnUpdateAllPlaylists.IsEnabled = true;
             comboboxPlaylistIDs.IsEnabled = true;
         }
-
         private void SendErrors_Checked(object sender, RoutedEventArgs e)
         {
             API.SendErrors = SendErrors.IsChecked.Value;
         }
-
-        private void SendInfo_Checked(object sender, RoutedEventArgs e)
+         private void SendInfo_Checked(object sender, RoutedEventArgs e)
         {
             API.SendInfo = SendInfo.IsChecked.Value;
         }
