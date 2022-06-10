@@ -31,25 +31,32 @@ namespace Youtuber2._0
 
             if (result != null)
             {
+                //dynamic jsonObject;
+                //jsonObject = (JObject)JsonConvert.DeserializeObject(result);
 
-                dynamic jsonObject = (JObject)JsonConvert.DeserializeObject(result);
+                playlist playlistitem = new playlist();
 
-                if (Convert.ToString(jsonObject.nextPageToken) == null)
+                playlistitem = JsonConvert.DeserializeObject<playlist>(result);
+
+                //if (Convert.ToString(jsonObject["nextPageToken"]) == null)
+                if (Convert.ToString(playlistitem.nextPageToken) == null)
                 {
-                    foreach (var item in jsonObject.items)
+                    foreach (Item item in playlistitem.items)
                     {
+                        //string videoTitle = Convert.ToString(item.snippet.title);
                         string videoTitle = Convert.ToString(item.snippet.title);
                         videoTitles.Add(videoTitle);
                     }
                     return videoTitles;
                 }
 
-                string test = Convert.ToString(jsonObject.nextPageToken);
+                string test = playlistitem.nextPageToken;
 
                 while (test != null)
                 {
-                    foreach (var item in jsonObject.items)
+                    foreach (Item item in playlistitem.items)
                     {
+                        //string videoTitle = Convert.ToString(item.snippet.title);
                         string videoTitle = Convert.ToString(item.snippet.title);
                         videoTitles.Add(videoTitle);
                     }
@@ -58,7 +65,7 @@ namespace Youtuber2._0
                     {
                         ["key"] = ConfigurationManager.AppSettings["APIKey"],
                         ["playlistId"] = playListId,
-                        ["pageToken"] = Convert.ToString(jsonObject.nextPageToken),
+                        ["pageToken"] = playlistitem.nextPageToken,
                         ["part"] = "snippet",
                         ["maxResults"] = "50"
                     };
@@ -67,11 +74,11 @@ namespace Youtuber2._0
 
                     result = await new HttpClient().GetStringAsync(fullUrl);
 
-                    jsonObject = (JObject)JsonConvert.DeserializeObject(result);
+                    playlistitem = JsonConvert.DeserializeObject<playlist>(result);
 
-                    if (Convert.ToString(jsonObject.nextPageToken) == null)
+                    if (Convert.ToString(playlistitem.nextPageToken) == null)
                     {
-                        foreach (var item in jsonObject.items)
+                        foreach (Item item in playlistitem.items)
                         {
                             string videoTitle = Convert.ToString(item.snippet.title);
                             videoTitles.Add(videoTitle);
@@ -79,7 +86,7 @@ namespace Youtuber2._0
                         return videoTitles;
                     }
 
-                    test = Convert.ToString(jsonObject.nextPageToken);
+                    test = playlistitem.nextPageToken;
                 }
 
                 return videoTitles;

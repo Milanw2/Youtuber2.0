@@ -29,11 +29,13 @@ namespace Youtuber2._0
 
             var result = await new HttpClient().GetStringAsync(fullUrl).ConfigureAwait(continueOnCapturedContext: false);
 
-            dynamic jsonObject = (JObject)JsonConvert.DeserializeObject(result);
+            //dynamic jsonObject = (JObject)JsonConvert.DeserializeObject(result);
+            playlist playlistitem = new playlist();
+            playlistitem = JsonConvert.DeserializeObject<playlist>(result);
 
-            if (Convert.ToString(jsonObject.nextPageToken) == null)
+            if (Convert.ToString(playlistitem.nextPageToken) == null)
             {
-                foreach (var item in jsonObject.items)
+                foreach (var item in playlistitem.items)
                 {
                     playlistName = Convert.ToString(item.snippet.title);
                 }

@@ -9,7 +9,7 @@
     <Grid>
         <Button Content="Close" HorizontalAlignment="Left" Margin="693,389,0,0" VerticalAlignment="Top" Width="89" Click="btnClose_Click"/>
         <TextBox x:Name="txtboxPlaylistID" HorizontalAlignment="Left" Height="20" Margin="10,34,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="283"/>
-        <Button Content="Insert" HorizontalAlignment="Left" Margin="298,34,0,0" VerticalAlignment="Top" Width="75" Click="btnInsert_Click"/>
+        <Button Content="Insert" HorizontalAlignment="Left" Margin="298,34,0,0" VerticalAlignment="Top" Width="75" Click="BtnInsert_Click"/>
         <ListBox x:Name="listboxPlaylistIDs" HorizontalAlignment="Left" Height="350" Margin="10,59,0,0" VerticalAlignment="Top" Width="363" SelectionChanged="listboxPlaylistIDs_SelectionChanged"/>
         <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Add or remove playlist IDs here." VerticalAlignment="Top" Width="283"/>
         <Button x:Name="btnDelete" Content="Delete" HorizontalAlignment="Left" Margin="387,67,0,0" VerticalAlignment="Top" Width="75" Click="btnDeleteClick" Panel.ZIndex="1"/>

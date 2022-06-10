@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Youtuber2._0
@@ -37,11 +38,13 @@ namespace Youtuber2._0
                 if (result != null)
                 {
 
-                    dynamic jsonObject = (JObject)JsonConvert.DeserializeObject(result);
+                    //dynamic jsonObject = (JObject)JsonConvert.DeserializeObject(result);
+                    playlist playlistitem = new playlist();
+                    playlistitem = JsonConvert.DeserializeObject<playlist>(result);
 
-                    if (Convert.ToString(jsonObject.nextPageToken) == null)
+                    if (Convert.ToString(playlistitem.nextPageToken) == null)
                     {
-                        foreach (var item in jsonObject.items)
+                        foreach (var item in playlistitem.items)
                         {
                             // CHECK ITEM.SNIPPET.TITLE IF IT CONTAINS '?'
                             VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.snippet.resourceId.videoId), Title = Convert.ToString(item.snippet.title) };
@@ -50,11 +53,11 @@ namespace Youtuber2._0
                         return videoObjects;
                     }
 
-                    string test = Convert.ToString(jsonObject.nextPageToken);
+                    string test = Convert.ToString(playlistitem.nextPageToken);
 
                     while (test != null)
                     {
-                        foreach (var item in jsonObject.items)
+                        foreach (var item in playlistitem.items)
                         {
                             // CHECK ITEM.SNIPPET.TITLE IF IT CONTAINS '?' 
                             VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.snippet.resourceId.videoId), Title = Convert.ToString(item.snippet.title) };
@@ -66,7 +69,7 @@ namespace Youtuber2._0
                         {
                             ["key"] = ConfigurationManager.AppSettings["APIKey"],
                             ["playlistId"] = playListId,
-                            ["pageToken"] = Convert.ToString(jsonObject.nextPageToken),
+                            ["pageToken"] = Convert.ToString(playlistitem.nextPageToken),
                             ["part"] = "snippet",
                             ["maxResults"] = "50"
                         };
@@ -75,11 +78,11 @@ namespace Youtuber2._0
 
                         result = await new HttpClient().GetStringAsync(fullUrl);
 
-                        jsonObject = (JObject)JsonConvert.DeserializeObject(result);
+                        playlistitem = JsonConvert.DeserializeObject<playlist>(result);
 
-                        if (Convert.ToString(jsonObject.nextPageToken) == null)
+                        if (Convert.ToString(playlistitem.nextPageToken) == null)
                         {
-                            foreach (var item in jsonObject.items)
+                            foreach (var item in playlistitem.items)
                             {
                                 VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.snippet.resourceId.videoId), Title = Convert.ToString(item.snippet.title) };
                                 videoObjects.Add(videoObject);
@@ -87,7 +90,7 @@ namespace Youtuber2._0
                             return videoObjects;
                         }
 
-                        test = Convert.ToString(jsonObject.nextPageToken);
+                        test = Convert.ToString(playlistitem.nextPageToken);
                     }
 
                     return videoObjects;
@@ -110,8 +113,8 @@ namespace Youtuber2._0
             if (parameters == null || parameters.Count() == 0)
                 return baseUrl;
 
-            return parameters.Aggregate(baseUrl,
-                (accumulated, kvp) => string.Format($"{accumulated}{kvp.Key}={kvp.Value}&"));
+            return Regex.Replace(parameters.Aggregate(baseUrl,
+                (accumulated, kvp) => string.Format($"{accumulated}{kvp.Key}={kvp.Value}&")), @"\s+", "");
         }
     }
 }
