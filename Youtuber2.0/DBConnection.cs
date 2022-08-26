@@ -11,7 +11,7 @@ namespace Youtuber2._0
 {
     public class DBConnection
     {
-        public static string ConnectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""I:\My Drive\Visual Studio Projects\Youtuber2.0\Youtuber2.0\YoutuberDB.mdf"";Integrated Security=True";
+        public static string ConnectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""I:\My Drive\Visual Studio Projects\Milanw2\Youtuber2.0\Youtuber2.0\YoutuberDB.mdf"";Integrated Security=True";
         public static SqlConnection con = new SqlConnection(ConnectionString);
         public static string GetDestinationFolder()
         {

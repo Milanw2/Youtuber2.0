@@ -41,8 +41,7 @@ namespace Youtuber2._0
         string selectedPlaylistID;
         List<VideoObject> allVideoIds = new List<VideoObject>();
         Stopwatch total;
-
-        API api = new API();
+        readonly API api = new API();
 
         // log4net
         public static readonly ILog _log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
@@ -54,6 +53,7 @@ namespace Youtuber2._0
             XmlConfigurator.Configure();
             InitVariables();
             _log.Info("Application opened");
+            Console.WriteLine("Application opened");
             API.SendErrors = SendErrors.IsChecked.Value;
             API.SendInfo = SendInfo.IsChecked.Value;
         }
@@ -67,57 +67,63 @@ namespace Youtuber2._0
             allVideoIds.Clear();
             total = new Stopwatch();
         }
-        private void btnSettings_Click(object sender, RoutedEventArgs e)
+        private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
             SettingsWindow SettingsWindow = new SettingsWindow();
             SettingsWindow.Show();
             _log.Debug("Settings Window opened");
+            Console.WriteLine("Settings Window opened");
         }
-        private void btnClose_Click(object sender, RoutedEventArgs e)
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             _log.Debug("Application closed");
+            Console.WriteLine("Application closed");
             this.Close();
         }
-        private void combobox_PlaylistIDs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void Combobox_PlaylistIDs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            string playListId = "";
+            string playListId;
             playListId = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[1];
             playListId = playListId.Replace("]", "");
             playListId = playListId.Replace(" ", "");
             _log.Debug("Playlist selection changed to : " + playListId);
+            Console.WriteLine("Playlist selection changed to : " + playListId);
             // Retrieve list of all videos
             try
             {
                 listbox_logging.ItemsSource = GetAllVideoTitles.GetVideoTitlesInPlayListAsync(playListId).Result;
                 _log.Debug("Successfully retrieved playlist items");
+                Console.WriteLine("Successfully retrieved playlist items");
             }
             catch (Exception ex)
             {
                 // No playlist was found prob
                 _log.Error(ex.InnerException.Message + "There is probably something wrong with your playlist ID. See manual for more information");
+                Console.WriteLine(ex.InnerException.Message + "There is probably something wrong with your playlist ID. See manual for more information");
             }
             
             label_amount.Content = listbox_logging.Items.Count.ToString();
         }
-        private async void btnUpdateSelectedPlaylist_Click(object sender, RoutedEventArgs e)
+        private async void BtnUpdateSelectedPlaylist_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 Stopwatch total = new Stopwatch();
                 total.Start();
 
-                disableButtons();
-                await Task.Run(() => this.UpdateSelectedPlaylist(sender, e, null, null));
-                enableButtons();
-
+                DisableButtons();
+                await Task.Run(() => this.UpdateSelectedPlaylist(null, null));
+                EnableButtons();
+                PlayMario();
                 total.Stop();
             }
             catch (Exception ex)
             {
                 _log.Error(ex.ToString());
+                Console.WriteLine(ex.ToString());
             }
         }
-        private void UpdateSelectedPlaylist(object sender, RoutedEventArgs e, string playList, string playListKey)
+        private void UpdateSelectedPlaylist(string playList, string playListKey)
         {
             try
             {
@@ -135,7 +141,10 @@ namespace Youtuber2._0
                 // Default checks
                 if (!DefaultChecks())
                 {
-                    MessageBox.Show("Default checks failed. See logging for more details.");
+                    Task.Run(() =>
+                    {
+                        MessageBox.Show("Default checks failed. See logging for more details.");
+                    });
                     return;
                 }
 
@@ -153,15 +162,21 @@ namespace Youtuber2._0
                 if (allVideoIds.Count == 0)
                 {
                     _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
-                    MessageBox.Show("Empty playlist?");
+                    Console.WriteLine("Video IDs where retrieved but empty -> probably empty playlist");
+                    Task.Run(() =>
+                    {
+                        MessageBox.Show("Empty playlist?");
+                    });
                     return;
                 }
                 _log.Debug("Retrieval is starting...");
+                Console.WriteLine("Retrieval is starting...");
 
-                api.ProcessVideosToMp3(allVideoIds, pathMp3Files, playlistTitle);
+                api.ProcessVideosToMp3(allVideoIds, pathMp3Files);
 
                 total.Stop();
                 _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => File downloaded in : " + total.Elapsed + " seconds.");
+                Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => File downloaded in : " + total.Elapsed + " seconds.");
 
                 // Reset variables just to be sure
                 InitVariables();
@@ -169,8 +184,12 @@ namespace Youtuber2._0
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Fatal error, send file 'proper.log' to me!");
+                //Task.Run(() =>
+                //{
+                    //MessageBox.Show("Fatal error, send file 'proper.log' to me!");
+                //});
                 _log.Error("Fatal error: " + ex.Message);
+                Console.WriteLine("Fatal error: " + ex.Message);
             }
         }
         private void SetVariablesAndDirectories()
@@ -181,6 +200,7 @@ namespace Youtuber2._0
             playlistTitle = playlistTitle.Replace("[", "");
             playlistTitle = playlistTitle.Replace(" ", "");
             _log.Debug("Playlist title = " + playlistTitle);
+            Console.WriteLine("Playlist title = " + playlistTitle);
 
             // Create folders if they don't already exists
             System.IO.Directory.CreateDirectory(filePath + "\\Youtuber");
@@ -192,6 +212,7 @@ namespace Youtuber2._0
             playListId = playListId.Replace("]", "");
             pathMp3Files = Environment.ExpandEnvironmentVariables(filePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
             _log.Debug("Mp3 file path = " + pathMp3Files);
+            Console.WriteLine("Mp3 file path = " + pathMp3Files);
             pathMp3Folder = Environment.ExpandEnvironmentVariables(filePath + "\\Youtuber\\Mp3\\" + playlistTitle);
         }
         private bool DefaultChecks()
@@ -201,21 +222,25 @@ namespace Youtuber2._0
             if (selectedPlaylistID == null)
             {
                 _log.Error("No playlist available to download or no playlist selected (impossible)");
+                Console.WriteLine("No playlist available to download or no playlist selected (impossible)");
                 return false;
             }
             // Check default folder is filled in
             if (filePath == null || filePath == "")
             {
                 _log.Error("No default folder is selected");
+                Console.WriteLine("No default folder is selected");
                 return false;
             }
             return true;
         }
-        private void btnRefresh_Click(object sender, RoutedEventArgs e)
+        private void BtnRefresh_Click(object sender, RoutedEventArgs e)
         {
             _log.Debug("Refreshing page");
+            Console.WriteLine("Refreshing page");
             RefreshPage();
             _log.Debug("Page refreshed");
+            Console.WriteLine("Page refreshed");
         }
         public void RefreshPage()
         {
@@ -231,47 +256,52 @@ namespace Youtuber2._0
             catch (Exception e)
             {
                 _log.Error("Error during retrieving playlist names." + e.Message);
+                Console.WriteLine("Error during retrieving playlist names." + e.Message);
             }
 
             comboboxPlaylistIDs.ItemsSource = map;
             comboboxPlaylistIDs.SelectedIndex = 0;
         }
-        private async void btnUpdateAllPlaylists_Click(object sender, RoutedEventArgs e)
+        private async void BtnUpdateAllPlaylists_Click(object sender, RoutedEventArgs e)
         {
             Stopwatch total = new Stopwatch();
-            string filePath = DBConnection.GetDestinationFolder();
             total.Start();
-            disableButtons();
+            DisableButtons();
 
-            foreach (KeyValuePair<string,string> kvp in comboboxPlaylistIDs.Items)
-            {
-                try
-                {
-                    //Get Playlist title
-                    playlistTitle = kvp.Key;
-                    playlistTitle = playlistTitle.Replace("[", "");
-                    playlistTitle = playlistTitle.Replace(" ", "");
-                    _log.Debug("Playlist title = " + playlistTitle);
+            await Task.Run(() => this.DownloadAll(""));
 
-                    // Create folders if they don't already exists
-                    System.IO.Directory.CreateDirectory(filePath + "\\Youtuber");
-                    System.IO.Directory.CreateDirectory(filePath + "\\Youtuber\\Mp3\\" + playlistTitle);
-                    System.IO.Directory.CreateDirectory(filePath + "\\Youtuber\\tmp");
-
-                    // Set variables
-                    playListId = kvp.Value;
-                    playListId = playListId.Replace("]", "");
-                    pathMp3Files = Environment.ExpandEnvironmentVariables(filePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
-                    _log.Debug("Mp3 file path = " + pathMp3Files);
-                    pathMp3Folder = Environment.ExpandEnvironmentVariables(filePath + "\\Youtuber\\Mp3\\" + playlistTitle);
-
-                    await Task.Run(() => this.UpdateSelectedPlaylist(sender, e, playListId, playlistTitle));
-                }
-                catch (Exception ex)
-                {
-                    _log.Error(ex.ToString());
-                }
-            }
+            //foreach (KeyValuePair<string, string> kvp in comboboxPlaylistIDs.Items)
+            //{
+            //    try
+            //    {
+            //        //Get Playlist title
+            //        playlistTitle = kvp.Key;
+            //        playlistTitle = playlistTitle.Replace("[", "");
+            //        playlistTitle = playlistTitle.Replace(" ", "");
+            //        _log.Debug("Playlist title = " + playlistTitle);
+            //        Console.WriteLine("Playlist title = " + playlistTitle);
+            //
+            //        // Create folders if they don't already exists
+            //        System.IO.Directory.CreateDirectory(filePath + "\\Youtuber");
+            //        System.IO.Directory.CreateDirectory(filePath + "\\Youtuber\\Mp3\\" + playlistTitle);
+            //        System.IO.Directory.CreateDirectory(filePath + "\\Youtuber\\tmp");
+            //
+            //        // Set variables
+            //        playListId = kvp.Value;
+            //        playListId = playListId.Replace("]", "");
+            //        pathMp3Files = Environment.ExpandEnvironmentVariables(filePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
+            //        _log.Debug("Mp3 file path = " + pathMp3Files);
+            //        Console.WriteLine("Mp3 file path = " + pathMp3Files);
+            //        pathMp3Folder = Environment.ExpandEnvironmentVariables(filePath + "\\Youtuber\\Mp3\\" + playlistTitle);
+            //
+            //        Task.Run(() => this.UpdateSelectedPlaylist(sender, e, playListId, playlistTitle));
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        _log.Error(ex.ToString());
+            //        Console.WriteLine(ex.ToString());
+            //    }
+            //}
 
             //for (int i = 0; i < comboboxPlaylistIDs.Items.Count; i++)
             //{
@@ -285,16 +315,59 @@ namespace Youtuber2._0
             //    }
             //}
 
-            enableButtons();
+            EnableButtons();
             total.Stop();
 
             _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => All processed in : " + total.Elapsed + " seconds.");
+            Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => All processed in : " + total.Elapsed + " seconds.");
 
-            playMario();
+            PlayMario();
 
             InitVariables();
         }
-        private void playMario()
+        private void DownloadAll(string startsWith)
+        {
+            string filePath = DBConnection.GetDestinationFolder();
+
+            foreach (KeyValuePair<string, string> kvp in comboboxPlaylistIDs.Items)
+            {
+                try
+                {
+                    //Get Playlist title
+                    playlistTitle = kvp.Key;
+                    playlistTitle = playlistTitle.Replace("[", "");
+                    playlistTitle = playlistTitle.Replace(" ", "");
+                    _log.Debug("Playlist title = " + playlistTitle);
+                    Console.WriteLine("Playlist title = " + playlistTitle);
+
+                    if (playlistTitle.StartsWith(startsWith))
+                    {
+
+                        // Create folders if they don't already exists
+                        System.IO.Directory.CreateDirectory(filePath + "\\Youtuber");
+                        System.IO.Directory.CreateDirectory(filePath + "\\Youtuber\\Mp3\\" + playlistTitle);
+                        System.IO.Directory.CreateDirectory(filePath + "\\Youtuber\\tmp");
+
+                        // Set variables
+                        playListId = kvp.Value;
+                        playListId = playListId.Replace("]", "");
+                        pathMp3Files = Environment.ExpandEnvironmentVariables(filePath + "\\Youtuber\\Mp3\\" + playlistTitle + "\\");
+                        _log.Debug("Mp3 file path = " + pathMp3Files);
+                        Console.WriteLine("Mp3 file path = " + pathMp3Files);
+                        pathMp3Folder = Environment.ExpandEnvironmentVariables(filePath + "\\Youtuber\\Mp3\\" + playlistTitle);
+
+                        _ = Task.Run(() => UpdateSelectedPlaylist(playListId, playlistTitle));
+
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.Error(ex.ToString());
+                    Console.WriteLine(ex.ToString());
+                }
+            }
+        }
+        private void PlayMario()
         {
             //System.Media.SoundPlayer player = new System.Media.SoundPlayer(Properties.Settings.Default.FilePath + "\\Youtuber\\Mp3\\SuperMarioBros.mp3");
             //player.Play();
@@ -302,35 +375,38 @@ namespace Youtuber2._0
 
             try
             {
-                WMPLib.WindowsMediaPlayer wplayer = new WMPLib.WindowsMediaPlayer();
-                wplayer.URL = filePath + "\\Youtuber\\Mp3\\SuperMarioBros.mp3";
+                WMPLib.WindowsMediaPlayer wplayer = new WMPLib.WindowsMediaPlayer
+                {
+                    URL = filePath + "\\Youtuber\\Mp3\\SuperMarioBros.mp3"
+                };
                 wplayer.controls.play();
+                _ = MessageBox.Show("Download finished!");
             }
             catch (Exception)
             {
-                MessageBox.Show("Download finished!");
+
+                _ = MessageBox.Show("Download finished!");
             }
         }
-        private void btnGetVideoUrlFile_Click(object sender, RoutedEventArgs e)
+        private void BtnGetVideoUrlFile_Click(object sender, RoutedEventArgs e)
         {
-            // Local variables
-            string playListId = "";
             IList<string> urlList = new List<string>();
-            string playlistTitle = "";
 
             // check if a playlist is selected
             if (comboboxPlaylistIDs.SelectedValue == null)
             {
                 _log.Error("No playlist available to download or no playlist selected (impossible)");
+                Console.WriteLine("No playlist available to download or no playlist selected (impossible)");
                 return;
             }
 
             //Get Playlist title
-            playlistTitle = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[0];
-            playlistTitle = playlistTitle.Replace("[", "");
+            //string playlistTitle = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[0];
+            //playlistTitle = playlistTitle.Replace("[", "");
 
+            // Local variables
             // Set variables
-            playListId = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[1];
+            string playListId = comboboxPlaylistIDs.SelectedValue.ToString().Split(',')[1];
             playListId = playListId.Replace("]", "");
 
             // Get all video IDs from the YouTube playlist
@@ -342,6 +418,7 @@ namespace Youtuber2._0
             catch (Exception ex)
             {
                 _log.Fatal("Error retrieving all video IDs = " + ex.Message);
+                Console.WriteLine("Error retrieving all video IDs = " + ex.Message);
                 return;
             }
 
@@ -349,6 +426,7 @@ namespace Youtuber2._0
             if (allVideoIds.Count == 0)
             {
                 _log.Error("Video IDs where retrieved but empty -> probably empty playlist");
+                Console.WriteLine("Video IDs where retrieved but empty -> probably empty playlist");
                 return;
             }
 
@@ -368,7 +446,7 @@ namespace Youtuber2._0
 
             Process.Start("UrlList.txt");
         }
-        private void disableButtons()
+        private void DisableButtons()
         {
             btnGetVideoUrlFile.IsEnabled = false;
             btnUpdateSelectedPlaylist.IsEnabled = false;
@@ -378,7 +456,7 @@ namespace Youtuber2._0
             btnUpdateAllPlaylists.IsEnabled = false;
             comboboxPlaylistIDs.IsEnabled = false;
         }
-        private void enableButtons()
+        private void EnableButtons()
         {
             btnGetVideoUrlFile.IsEnabled = true;
             btnUpdateSelectedPlaylist.IsEnabled = true;
@@ -395,6 +473,44 @@ namespace Youtuber2._0
          private void SendInfo_Checked(object sender, RoutedEventArgs e)
         {
             API.SendInfo = SendInfo.IsChecked.Value;
+        }
+
+        private async void BtnUpdatePlaylistsMilan_Click(object sender, RoutedEventArgs e)
+        {
+            Stopwatch total = new Stopwatch();
+            total.Start();
+            DisableButtons();
+
+            await Task.Run(() => this.DownloadAll("Milan"));
+
+            EnableButtons();
+            total.Stop();
+
+            _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => All processed in : " + total.Elapsed + " seconds.");
+            Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => All processed in : " + total.Elapsed + " seconds.");
+
+            PlayMario();
+
+            InitVariables();
+        }
+
+        private async void BtnUpdatePlaylistsJoeri_Click(object sender, RoutedEventArgs e)
+        {
+            Stopwatch total = new Stopwatch();
+            total.Start();
+            DisableButtons();
+
+            await Task.Run(() => this.DownloadAll("Joeri"));
+
+            EnableButtons();
+            total.Stop();
+
+            _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => All processed in : " + total.Elapsed + " seconds.");
+            Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => All processed in : " + total.Elapsed + " seconds.");
+
+            PlayMario();
+
+            InitVariables();
         }
     }
 }

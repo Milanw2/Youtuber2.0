@@ -29,17 +29,16 @@ namespace Youtuber2._0
 
         }
 
-        public void ProcessVideosToMp3(List<VideoObject> allVideoIds, string pathMp3Files, string playlistTile)
+        public void ProcessVideosToMp3(List<VideoObject> allVideoIds, string pathMp3Files)
         {
             var events = new List<ManualResetEvent>();
 
             _log.Debug("allVideoIds.Count : " + allVideoIds.Count);
+            Console.WriteLine("allVideoIds.Count : " + allVideoIds.Count);
             int numberOfTasks = allVideoIds.Count;
-            //ManualResetEvent signal = new ManualResetEvent(false);
 
             try
             {
-                //foreach (VideoObject videoObject in allVideoIds)
                 Parallel.ForEach(allVideoIds, videoObject =>
                 {
                     try
@@ -49,6 +48,7 @@ namespace Youtuber2._0
                         stopWatchFile.Start();
 
                         _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Processing: " + videoObject.Title);
+                        Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Processing: " + videoObject.Title);
 
                         var youtube = YouTube.Default;
 
@@ -72,6 +72,7 @@ namespace Youtuber2._0
                                 }
                             }
                             _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Audio bitrate = " + videoHighRes.AudioBitrate + " => " + filename);
+                            Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Audio bitrate = " + videoHighRes.AudioBitrate + " => " + filename);
 
                             // Write video to file if mp3 version doesn't exist yet 
                             if (!File.Exists(pathMp3Files + filename + ".mp3"))
@@ -83,22 +84,13 @@ namespace Youtuber2._0
                                     try
                                     {
                                         _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Attempt number : " + attempts + " of file " + filename);
-                                        //content = videoHighRes.GetBytes();
+                                        Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Attempt number : " + attempts + " of file " + filename);
                                         GlobalMp3Path = pathMp3Files;
-                                        //DownloadYoutubeVideo(videoHighRes.Uri, filename);
                                         try
                                         {
                                             IWaveSource videoSource = CSCore.Codecs.CodecFactory.Instance.GetCodec(new Uri(videoHighRes.Uri));
                                             Tuple<IWaveSource, String> package = Tuple.Create(videoSource, filename);
 
-                                            //var resetEvent = new ManualResetEvent(false);
-                                            //ThreadPool.QueueUserWorkItem(
-                                            //    arg =>
-                                            //    {
-                                            //        ThreadedConvertToMp3(package);
-                                            //        resetEvent.Set();
-                                            //    });
-                                            //events.Add(resetEvent);
                                             ThreadedConvertToMp3(package);
                                         }
                                         catch (Exception ex)
@@ -108,6 +100,7 @@ namespace Youtuber2._0
                                                 File.Delete(GlobalMp3Path + filename + ".mp3");
                                             }
                                             _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video : " + filename + " with error message: " + ex.Message);
+                                            Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video : " + filename + " with error message: " + ex.Message);
 
                                         }
                                         break;
@@ -115,58 +108,46 @@ namespace Youtuber2._0
                                     catch (Exception x)
                                     {
                                         _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in retry " + attempts + " with message : " + x.Message);
+                                        Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in retry " + attempts + " with message : " + x.Message);
                                     }
-                                    //if (Interlocked.Decrement(ref numberOfTasks) == 0)
-                                    //{
-                                    //    signal.Set();
-                                    //}
                                     System.Threading.Thread.Sleep(1000); // Possibly a good idea to pause here
                                 }
                             }
                             else
                             {
                                 _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => File already exists.");
+                                Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => File already exists.");
                             }
                         }
                         catch (NullReferenceException e)
                         {
                             _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video : " + videoObject.Title + " with error message: " + e.Message);
+                            Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video : " + videoObject.Title + " with error message: " + e.Message);
                         }
                         catch (Exception ex)
                         {
                             _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video : " + videoObject.Title + " with error message: " + ex.Message);
+                            Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during retrieving or writing video : " + videoObject.Title + " with error message: " + ex.Message);
                             throw ex;
                         }
                         stopWatchFile.Stop();
                         _log.Debug($"Thread : {Thread.CurrentThread.ManagedThreadId} => File downloaded in : " + stopWatchFile.Elapsed + " seconds.");
+                        Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => File downloaded in : " + stopWatchFile.Elapsed + " seconds.");
                         _log.Info($"Thread : {Thread.CurrentThread.ManagedThreadId} => Downloaded : " + videoObject.Title);
+                        Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Downloaded : " + videoObject.Title);
                         _log.Debug("numberOfTasks : " + numberOfTasks);
-                        //if (Interlocked.Decrement(ref numberOfTasks) == 0)
-                        //{
-                        //    signal.Set();
-                        //}
+                        Console.WriteLine("numberOfTasks : " + numberOfTasks);
 
                     }
                     catch (Exception ex)
                     {
                         _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during paralle foreach with error message: " + ex.Message);
-                        //if ((ex.Message.Contains("niet beschikbaar") == false) || (ex.Message.Contains("unavailable") == false))
-                        //{
-                        //    throw ex;
-                        //}
+                        Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error during paralle foreach with error message: " + ex.Message);
                         var values = new[] { "niet beschikbaar", "unavailable" };
-                        if (values.Any(ex.Message.Contains) == false)
-                        {
-                            throw ex;
-                        }
                     }
                 });
 
                 System.Media.SystemSounds.Beep.Play();
-                MessageBox.Show("Download finished!", "This is a caption", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                //WaitHandle.WaitAll(events.ToArray());
-                //signal.WaitOne();
 
             }
             catch (AggregateException err)
@@ -175,20 +156,16 @@ namespace Youtuber2._0
                 {
                     Debug.WriteLine(errInner); //this will call ToString() on the inner execption and get you message, stacktrace and you could perhaps drill down further into the inner exception of it if necessary 
                     _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error message: " + errInner);
+                    Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error message: " + errInner);
                 }
                 throw err;
             }
             catch (Exception e)
             {
                 _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error message: " + e.Message);
+                Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error message: " + e.Message);
                 throw e;
             }
-        }
-
-        private bool DownloadYoutubeVideo(string uri, string videoFullName)
-        {
-
-            return true;
         }
 
         private void ThreadedConvertToMp3(object callback)
@@ -203,10 +180,12 @@ namespace Youtuber2._0
             catch (NullReferenceException e)
             {
                 _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in other thread (ConvertToMp3) videoTitle : " + videoTitle + " with error message: " + e.Message);
+                Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in other thread (ConvertToMp3) videoTitle : " + videoTitle + " with error message: " + e.Message);
             }
             catch (Exception e)
             {
                 _log.Error($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in other thread (ConvertToMp3) videoTitle : " + videoTitle + " with error message: " + e.Message);
+                Console.WriteLine($"Thread : {Thread.CurrentThread.ManagedThreadId} => Error in other thread (ConvertToMp3) videoTitle : " + videoTitle + " with error message: " + e.Message);
             }
         }
 
@@ -218,39 +197,43 @@ namespace Youtuber2._0
                 Console.WriteLine("The current platform does not support mp3 encoding.");
                 return true;
             }
-            if (supportedFormats.All(
-                x => x.SampleRate != source.WaveFormat.SampleRate && x.Channels == source.WaveFormat.Channels))
-            {
-                int sampleRate =
-                    supportedFormats.OrderBy(x => Math.Abs(source.WaveFormat.SampleRate - x.SampleRate))
-                        .First(x => x.Channels == source.WaveFormat.Channels)
-                        .SampleRate;
 
-                Console.WriteLine("Samplerate {0} -> {1}", source.WaveFormat.SampleRate, sampleRate);
-                Console.WriteLine("Channels {0} -> {1}", source.WaveFormat.Channels, 2);
-                source = source.ChangeSampleRate(sampleRate);
+            if (source.WaveFormat == null)
+            {
+                return true;
             }
-            using (source)
+            else
             {
-                using (var encoder = MediaFoundationEncoder.CreateMP3Encoder(source.WaveFormat, GlobalMp3Path + videoTitle + ".mp3"))
+                if (supportedFormats.All(
+                    x => x.SampleRate != source.WaveFormat.SampleRate && x.Channels == source.WaveFormat.Channels))
                 {
-                    byte[] buffer = new byte[source.WaveFormat.BytesPerSecond];
-                    int read;
-                    while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
-                    {
-                        encoder.Write(buffer, 0, read);
+                    int sampleRate =
+                        supportedFormats.OrderBy(x => Math.Abs(source.WaveFormat.SampleRate - x.SampleRate))
+                            .First(x => x.Channels == source.WaveFormat.Channels)
+                            .SampleRate;
 
-                        //Console.CursorLeft = 0;
-                        //Console.Write("{0:P}/{1:P}", (double)source.Position / source.Length, 1);
+                    Console.WriteLine("Samplerate {0} -> {1}", source.WaveFormat.SampleRate, sampleRate);
+                    Console.WriteLine("Channels {0} -> {1}", source.WaveFormat.Channels, 2);
+                    source = source.ChangeSampleRate(sampleRate);
+                }
+                using (source)
+                {
+                    using (var encoder = MediaFoundationEncoder.CreateMP3Encoder(source.WaveFormat, GlobalMp3Path + videoTitle + ".mp3"))
+                    {
+                        byte[] buffer = new byte[source.WaveFormat.BytesPerSecond];
+                        int read;
+                        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            encoder.Write(buffer, 0, read);
+                        }
                     }
                 }
+                // Set metadata album to playlist name
+                TagLib.File f = TagLib.File.Create(GlobalMp3Path + videoTitle + ".mp3");
+                f.Tag.Album = GlobalMp3Path.Substring(GlobalMp3Path.TrimEnd('\\').LastIndexOf("\\") + 1).TrimEnd('\\');
+                f.Save();
+                return false;
             }
-            //File.Delete(GlobalMp3Path + videoTitle + ".mp4");
-            // Set metadata album to playlist name
-            TagLib.File f = TagLib.File.Create(GlobalMp3Path + videoTitle + ".mp3");
-            f.Tag.Album = GlobalMp3Path.Substring(GlobalMp3Path.TrimEnd('\\').LastIndexOf("\\") + 1).TrimEnd('\\');
-            f.Save();
-            return false;
         }
     }
 }

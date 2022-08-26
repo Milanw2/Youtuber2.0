@@ -38,29 +38,28 @@ namespace Youtuber2._0
                 if (result != null)
                 {
 
-                    //dynamic jsonObject = (JObject)JsonConvert.DeserializeObject(result);
-                    playlist playlistitem = new playlist();
-                    playlistitem = JsonConvert.DeserializeObject<playlist>(result);
+                    Playlist playlistitem = new Playlist();
+                    playlistitem = JsonConvert.DeserializeObject<Playlist>(result);
 
-                    if (Convert.ToString(playlistitem.nextPageToken) == null)
+                    if (Convert.ToString(playlistitem.NextPageToken) == null)
                     {
-                        foreach (var item in playlistitem.items)
+                        foreach (var item in playlistitem.Items)
                         {
                             // CHECK ITEM.SNIPPET.TITLE IF IT CONTAINS '?'
-                            VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.snippet.resourceId.videoId), Title = Convert.ToString(item.snippet.title) };
+                            VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.Snippet.ResourceId.VideoId), Title = Convert.ToString(item.Snippet.Title) };
                             videoObjects.Add(videoObject);
                         }
                         return videoObjects;
                     }
 
-                    string test = Convert.ToString(playlistitem.nextPageToken);
+                    string test = Convert.ToString(playlistitem.NextPageToken);
 
                     while (test != null)
                     {
-                        foreach (var item in playlistitem.items)
+                        foreach (var item in playlistitem.Items)
                         {
                             // CHECK ITEM.SNIPPET.TITLE IF IT CONTAINS '?' 
-                            VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.snippet.resourceId.videoId), Title = Convert.ToString(item.snippet.title) };
+                            VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.Snippet.ResourceId.VideoId), Title = Convert.ToString(item.Snippet.Title) };
 
                             videoObjects.Add(videoObject);
                         }
@@ -69,7 +68,7 @@ namespace Youtuber2._0
                         {
                             ["key"] = ConfigurationManager.AppSettings["APIKey"],
                             ["playlistId"] = playListId,
-                            ["pageToken"] = Convert.ToString(playlistitem.nextPageToken),
+                            ["pageToken"] = Convert.ToString(playlistitem.NextPageToken),
                             ["part"] = "snippet",
                             ["maxResults"] = "50"
                         };
@@ -78,19 +77,19 @@ namespace Youtuber2._0
 
                         result = await new HttpClient().GetStringAsync(fullUrl);
 
-                        playlistitem = JsonConvert.DeserializeObject<playlist>(result);
+                        playlistitem = JsonConvert.DeserializeObject<Playlist>(result);
 
-                        if (Convert.ToString(playlistitem.nextPageToken) == null)
+                        if (Convert.ToString(playlistitem.NextPageToken) == null)
                         {
-                            foreach (var item in playlistitem.items)
+                            foreach (var item in playlistitem.Items)
                             {
-                                VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.snippet.resourceId.videoId), Title = Convert.ToString(item.snippet.title) };
+                                VideoObject videoObject = new VideoObject { Id = Convert.ToString(item.Snippet.ResourceId.VideoId), Title = Convert.ToString(item.Snippet.Title) };
                                 videoObjects.Add(videoObject);
                             }
                             return videoObjects;
                         }
 
-                        test = Convert.ToString(playlistitem.nextPageToken);
+                        test = Convert.ToString(playlistitem.NextPageToken);
                     }
 
                     return videoObjects;
@@ -100,9 +99,9 @@ namespace Youtuber2._0
             catch (Exception ex)
             {
                 _log.Error("Error during retrieving of the video IDs: " + ex.Message);
-                throw;
+                Console.WriteLine("Error during retrieving of the video IDs: " + ex.Message);
             }
-            return default(List<VideoObject>);
+            return default;
         }
 
         private static string MakeUrlWithQuery(string baseUrl, IEnumerable<KeyValuePair<string, string>> parameters)

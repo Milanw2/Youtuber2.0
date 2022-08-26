@@ -15,7 +15,7 @@ namespace Youtuber2._0
         public SettingsWindow()
         {
             InitializeComponent();
-            this.updatePlaylistIDs();
+            this.UpdatePlaylistIDs();
             this.btnDelete.Visibility = Visibility.Hidden;
             //txtblockFilepath.Text = Properties.Settings.Default.FilePath.ToString();
 
@@ -25,14 +25,23 @@ namespace Youtuber2._0
         private void BtnInsert_Click(object sender, RoutedEventArgs e)
         {
             //Properties.Settings.Default.PlaylistIDs.Add(txtboxPlaylistID.Text);
+            string playlistId = GetPlaylistName.GetPlaylistNameAsync(txtboxPlaylistID.Text).Result;
 
-            DBConnection.InsertPlaylistIdById(GetPlaylistName.GetPlaylistNameAsync(txtboxPlaylistID.Text).Result, txtboxPlaylistID.Text);
+            if (playlistId == "")
+            {
+                MessageBox.Show("No playlist found!", "Playlist code?");
+            }
+            else
+            {
+                DBConnection.InsertPlaylistIdById(playlistId, txtboxPlaylistID.Text);
+            }
+            
 
-            this.updatePlaylistIDs();
+            this.UpdatePlaylistIDs();
             //Properties.Settings.Default.Save();
         }
 
-        private void listboxPlaylistIDs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ListboxPlaylistIDs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             this.btnDelete.Visibility = Visibility.Visible;
             if (listboxPlaylistIDs.SelectedItem != null)
@@ -45,7 +54,7 @@ namespace Youtuber2._0
             }
         }
 
-        public void btnDeleteClick(object sender, RoutedEventArgs e)
+        public void BtnDeleteClick(object sender, RoutedEventArgs e)
         {
             //Properties.Settings.Default.PlaylistIDs.RemoveAt(listboxPlaylistIDs.SelectedIndex);
             //Properties.Settings.Default.Save();
@@ -54,22 +63,22 @@ namespace Youtuber2._0
                 DBConnection.DeletePlaylistIdById(listboxPlaylistIDs.SelectedValue.ToString());
             }
             
-            this.updatePlaylistIDs();
+            this.UpdatePlaylistIDs();
         }
 
-        public void updatePlaylistIDs()
+        public void UpdatePlaylistIDs()
         {
             //listboxPlaylistIDs.ItemsSource = Properties.Settings.Default.PlaylistIDs.Cast<string>().ToArray();
             listboxPlaylistIDs.ItemsSource = DBConnection.GetPlaylistIdsArray().ToArray();
             listboxPlaylistIDs.SelectedIndex = -1;
         }
 
-        private void btnClose_Click(object sender, RoutedEventArgs e)
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
         }
 
-        private void btnFolderBrowser_Click(object sender, RoutedEventArgs e)
+        private void BtnFolderBrowser_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new WinForms.FolderBrowserDialog();
             WinForms.DialogResult result = dialog.ShowDialog();
